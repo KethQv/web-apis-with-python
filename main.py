@@ -1,5 +1,5 @@
-from fastapi import FastAPI
-from typing import Optional
+from fastapi import FastAPI, Query
+from typing import Optional, List
 from model.dbHandler import match_exact, match_like
 
 app = FastAPI()
@@ -17,7 +17,7 @@ def index():
 
 
 @app.get("/dict")
-def dictionary(word: str):
+def dictionary(words: List[str] = Query(None)):
     """
     DEFAULT ROUTE
     This method will
@@ -25,19 +25,21 @@ def dictionary(word: str):
     2. Try to find an exact match, and return it if found
     3. If not found, find all approximate matches and return
     """
-    if not word:
-        response = {'status': 'error', 'word': word, 'data': 'word not found'}
+    if not words:
+        response = {'status': 'error', 'words': words, 'data': 'word not found'}
         return response
 
-    definitions = match_exact(word)
-    if definitions:
-        response = {'status': 'success', 'word': word, 'data': definitions}
-        return response
+    # Initialize response
+    response = {'words': []}
 
-    definitions = match_like(word)
-    if definitions:
-        response = {'status': 'success', 'word': word, 'data': definitions}
-        return response
-    else:
-        response = {'status': 'error', 'word': word, 'data': 'word not found'}
-        return response
+    for word in words:
+        definitions = match_exact(word)
+        if definitions:
+            response['words'].append({'status': 'success', 'word': word, 'data': definitions, 'data-type': 'exact'})
+        else:
+            definitions = match_like(word)
+            if definitions:
+                response['words'].append({'status': 'success', 'word': word, 'data': definitions, 'data-type': 'approximate'})
+            else:
+                response['words'].append({'status': 'error', 'word': word, 'data': 'word not found'})
+    return response
